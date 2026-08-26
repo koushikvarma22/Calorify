@@ -4,6 +4,7 @@ from flask_cors import CORS
 from backend.config import config
 from backend.models import db
 from backend.logger import setup_logger
+from backend.errors import register_error_handlers
 from backend.routes.user_routes import user_bp
 from backend.routes.food_routes import food_bp
 from backend.routes.daily_log_routes import daily_log_bp
@@ -19,6 +20,7 @@ def create_app(config_name=None):
     db.init_app(app)
     CORS(app, origins=app.config.get('FRONTEND_ORIGINS', '*'))
     setup_logger(app)
+    register_error_handlers(app)
 
     @app.get('/api/health')
     def health():
