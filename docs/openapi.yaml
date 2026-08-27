@@ -1,0 +1,77 @@
+openapi: 3.0.3
+info:
+  title: Calorify REST API
+  description: Backend API for Calorify nutrition tracking and AI food analysis.
+  version: 1.0.0
+paths:
+  /api/health:
+    get:
+      summary: Health check endpoint
+      responses:
+        '200':
+          description: API is operational
+  /api/users:
+    post:
+      summary: Sync or create user profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [firebase_uid]
+              properties:
+                firebase_uid: {type: string}
+                name: {type: string}
+                email: {type: string}
+                calorie_goal: {type: integer}
+      responses:
+        '200':
+          description: User created or updated
+  /api/foods:
+    post:
+      summary: Add a meal entry
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [firebase_uid, food_name]
+              properties:
+                firebase_uid: {type: string}
+                food_name: {type: string}
+                meal: {type: string}
+                calories: {type: number}
+                protein: {type: number}
+                carbs: {type: number}
+                fat: {type: number}
+                fiber: {type: number}
+      responses:
+        '201':
+          description: Meal added
+  /api/summary/{uid}:
+    get:
+      summary: Fetch daily calorie, macro, and activity totals
+      parameters:
+        - in: path
+          name: uid
+          required: true
+          schema: {type: string}
+      responses:
+        '200':
+          description: Summary aggregated data
+  /api/analyze-food:
+    post:
+      summary: Analyze image for calories and macros via OpenAI Vision
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                image: {type: string, format: binary}
+      responses:
+        '200':
+          description: Nutrition estimations
