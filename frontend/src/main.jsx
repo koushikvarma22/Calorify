@@ -1,25 +1,118 @@
-import React,{useEffect,useState} from 'react';
-import {createRoot} from 'react-dom/client';
-import {GoogleAuthProvider,onAuthStateChanged,signInWithPopup,signOut} from 'firebase/auth';
-import {Flame,Camera,LogOut,Droplets,Dumbbell,Trash2,Sparkles} from 'lucide-react';
-import {auth} from './firebase'; import api from './api'; import './styles.css';
+import React, { useEffect, useState } from 'react';
+import { createRoot } from 'react-dom/client';
+import { Flame } from 'lucide-react';
+import { subscribeToAuth } from './services/auth';
+import api from './services/api';
+import Header from './components/Header';
+import Login from './components/Login';
+import DashboardView from './components/Dashboard';
+import FoodList from './components/FoodList';
+import FoodScanner from './components/FoodScanner';
+import './styles.css';
 
-const empty={calories:0,goal:2000,protein:0,carbs:0,fat:0,water_ml:0,exercise_minutes:0};
-function Login(){return <div className="login"><div className="login-card"><div className="logo"><Flame/></div><small>CALORIFY • AI NUTRITION</small><h1>Eat. Track.<br/><span>Improve.</span></h1><p>Track meals, calories and nutrition with Cali, your AI nutrition assistant.</p><button className="primary full" onClick={()=>signInWithPopup(auth,new GoogleAuthProvider())}>Continue with Google</button><em>AI food estimates are informational.</em></div></div>}
-function Stat({icon,title,value,button,onClick}){return <div className="card stat"><div className="stat-icon">{icon}</div><small>{title}</small><strong>{value}</strong><button onClick={onClick}>{button}</button></div>}
-function Macro({name,value}){return <div className="macro card"><span>{name}</span><b>{Math.round(value)} g</b><i><u style={{width:Math.min(100,value/1.5)+'%'}}/></i></div>}
-function FoodList({foods,onDelete,title="Today's meals"}){return <section className="food-section"><small>FOOD DIARY</small><h3>{title}</h3>{foods.length?foods.map(x=><div className="food card" key={x.id}><div className="food-icon">🍽️</div><div className="food-info"><b>{x.food_name}</b><small>{x.meal} · {new Date(x.consumed_at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</small></div><strong>{Math.round(x.calories)} <small>kcal</small></strong><button className="delete" onClick={()=>onDelete(x.id)}><Trash2/></button></div>):<div className="empty">No meals logged yet. Add your first meal ✨</div>}</section>}
-function Dashboard({user}){
- const [tab,setTab]=useState('dashboard'),[foods,setFoods]=useState([]),[s,setS]=useState(empty),[file,setFile]=useState(null),[result,setResult]=useState(null),[busy,setBusy]=useState(false); const uid=user.uid;
- const load=async()=>{const [a,b]=await Promise.all([api.get('/summary/'+uid),api.get('/foods/'+uid)]);setS(a.data);setFoods(b.data)};
- useEffect(()=>{api.post('/users',{firebase_uid:uid,name:user.displayName||'',email:user.email||''}).then(load).catch(console.error)},[uid]);
- const scan=async()=>{if(!file)return;setBusy(true);const f=new FormData();f.append('image',file);try{setResult((await api.post('/analyze-food',f)).data)}catch(e){alert(e.response?.data?.error||'Analysis failed')}finally{setBusy(false)}};
- const save=async()=>{await api.post('/foods',{firebase_uid:uid,food_name:result.food_name,meal:'Snack',calories:result.estimated_calories,protein:result.protein_g,carbs:result.carbs_g,fat:result.fat_g,fiber:result.fiber_g});setFile(null);setResult(null);await load();setTab('dashboard')};
- const log=async(w,e)=>{await api.post('/daily-log',{firebase_uid:uid,water_ml:w,exercise_minutes:e});load()}; const pct=Math.min(100,s.calories/s.goal*100);
- return <div className="app"><header><div className="brand"><div className="brand-sm"><Flame/></div><b>Calor<span>ify</span></b></div><nav>{[['dashboard','Dashboard'],['diary','Food Diary'],['scanner','AI Scanner']].map(([id,label])=><button className={tab===id?'active':''} onClick={()=>setTab(id)} key={id}>{label}</button>)}</nav><button className="logout" onClick={()=>signOut(auth)}><LogOut/></button></header><main><div className="intro"><div><small>TODAY • YOUR NUTRITION</small><h2>Hello, {user.displayName?.split(' ')[0]||'there'} 👋</h2><p>Let's keep your nutrition on track.</p></div><button className="primary" onClick={()=>setTab('scanner')}><Camera/> Scan food</button></div>
- {tab==='dashboard'&&<><section className="cards"><div className="card calories"><div className="circle" style={{'--pct':pct+'%'}}><div><strong>{Math.round(s.calories)}</strong><span>/{s.goal} kcal</span></div></div><div><small>DAILY CALORIES</small><h3>{Math.max(0,s.goal-s.calories).toFixed(0)} kcal remaining</h3><p>Keep going — every meal counts.</p></div></div><Stat icon={<Droplets/>} title="Water" value={(s.water_ml/1000).toFixed(1)+' L'} button="+250 ml" onClick={()=>log(s.water_ml+250,s.exercise_minutes)}/><Stat icon={<Dumbbell/>} title="Exercise" value={s.exercise_minutes+' min'} button="+10 min" onClick={()=>log(s.water_ml,s.exercise_minutes+10)}/></section><div className="macros"><Macro name="Protein" value={s.protein}/><Macro name="Carbs" value={s.carbs}/><Macro name="Fat" value={s.fat}/></div><FoodList foods={foods} onDelete={async id=>{await api.delete('/foods/'+id);load()}}/></>}
- {tab==='diary'&&<FoodList foods={foods} title="Everything you've logged" onDelete={async id=>{await api.delete('/foods/'+id);load()}}/>}
- {tab==='scanner'&&<section className="scanner card"><small>CALI • AI FOOD SCANNER</small><h2>What did you eat?</h2><p>Upload a food photo and Cali will estimate calories and macros.</p><label className="upload"><Camera/><b>{file?file.name:'Choose a food photo'}</b><span>JPG, PNG or WEBP</span><input type="file" accept="image/*" onChange={e=>{setFile(e.target.files?.[0]||null);setResult(null)}}/></label>{file&&<button className="primary" disabled={busy} onClick={scan}>{busy?'Cali is analyzing...':'Analyze food'} <Sparkles/></button>}{result&&<div className="result"><h3>{result.food_name}</h3><div className="result-grid"><strong>{result.estimated_calories}<small> kcal</small></strong><span>Protein {result.protein_g}g</span><span>Carbs {result.carbs_g}g</span><span>Fat {result.fat_g}g</span></div><p>{result.portion_note} · Confidence: {result.confidence}</p><button className="primary" onClick={save}>Save to diary</button></div>}</section>}
- </main></div>}
-function App(){const [user,setUser]=useState(undefined);useEffect(()=>onAuthStateChanged(auth,setUser),[]);if(user===undefined)return <div className="loading"><Flame/><h2>Calorify</h2></div>;return user?<Dashboard user={user}/>:<Login/>}
-createRoot(document.getElementById('root')).render(<App/>);
+const initialSummary = {
+  calories: 0,
+  goal: 2000,
+  protein: 0,
+  carbs: 0,
+  fat: 0,
+  water_ml: 0,
+  exercise_minutes: 0,
+};
+
+function App() {
+  const [user, setUser] = useState(undefined);
+  const [tab, setTab] = useState('dashboard');
+  const [foods, setFoods] = useState([]);
+  const [summary, setSummary] = useState(initialSummary);
+
+  useEffect(() => {
+    return subscribeToAuth(setUser);
+  }, []);
+
+  const loadData = async (uid) => {
+    try {
+      const [sumRes, foodsRes] = await Promise.all([
+        api.get(`/summary/${uid}`),
+        api.get(`/foods/${uid}`)
+      ]);
+      setSummary(sumRes.data);
+      setFoods(foodsRes.data);
+    } catch (err) {
+      console.error('Failed to load user data:', err);
+    }
+  };
+
+  useEffect(() => {
+    if (!user) return;
+    api.post('/users', {
+      firebase_uid: user.uid,
+      name: user.displayName || '',
+      email: user.email || ''
+    }).then(() => loadData(user.uid)).catch(console.error);
+  }, [user]);
+
+  const handleDeleteFood = async (id) => {
+    await api.delete(`/foods/${id}`);
+    if (user) loadData(user.uid);
+  };
+
+  const handleLogActivity = async (water, exercise) => {
+    if (!user) return;
+    await api.post('/daily-log', {
+      firebase_uid: user.uid,
+      water_ml: water,
+      exercise_minutes: exercise
+    });
+    loadData(user.uid);
+  };
+
+  if (user === undefined) {
+    return (
+      <div className="loading">
+        <Flame />
+        <h2>Calorify</h2>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Login />;
+  }
+
+  return (
+    <div className="app">
+      <Header tab={tab} setTab={setTab} />
+      <main>
+        {tab === 'dashboard' && (
+          <DashboardView
+            user={user}
+            summary={summary}
+            foods={foods}
+            onDeleteFood={handleDeleteFood}
+            onLogActivity={handleLogActivity}
+            setTab={setTab}
+          />
+        )}
+        {tab === 'diary' && (
+          <FoodList
+            foods={foods}
+            title="All Logged Meals"
+            onDelete={handleDeleteFood}
+          />
+        )}
+        {tab === 'scanner' && (
+          <FoodScanner
+            uid={user.uid}
+            onSaved={() => {
+              loadData(user.uid);
+              setTab('dashboard');
+            }}
+          />
+        )}
+      </main>
+    </div>
+  );
+}
+
+createRoot(document.getElementById('root')).render(<App />);
