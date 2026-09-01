@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  database:
+    image: mysql:8.0
+    container_name: calorify-mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: calorify
+      MYSQL_USER: calorify_user
+      MYSQL_PASSWORD: calorifypassword
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./database/seed.sql:/docker-entrypoint-initdb.d/02-seed.sql:ro
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: calorify-backend
+    restart: always
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=mysql+pymysql://calorify_user:calorifypassword@database:3306/calorify
+      - FRONTEND_ORIGIN=http://localhost:5173
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+    depends_on:
+      - database
+
+volumes:
+  mysql_data:
