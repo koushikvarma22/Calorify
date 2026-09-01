@@ -1,4 +1,14 @@
 import os
+import sys
+from pathlib import Path
+
+# Ensure backend and project root are in sys.path
+_CURRENT_DIR = Path(__file__).resolve().parent
+_PARENT_DIR = _CURRENT_DIR.parent
+for _p in [str(_PARENT_DIR), str(_CURRENT_DIR)]:
+    if _p not in sys.path:
+        sys.path.insert(0, _p)
+
 from flask import Flask, jsonify
 from flask_cors import CORS
 from backend.config import config
