@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { createRoot } from 'react-dom/client';
 import { Flame } from 'lucide-react';
 import { subscribeToAuth } from './services/auth';
 import api from './services/api';
