@@ -1,10 +1,10 @@
 import React from 'react';
-import { Camera, Droplets, Dumbbell } from 'lucide-react';
+import { Camera, Droplets } from 'lucide-react';
 import StatCard from './StatCard';
 import MacroBar from './MacroBar';
 import FoodList from './FoodList';
 
-export default function DashboardView({ user, summary, foods, onDeleteFood, onLogActivity, setTab }) {
+export default function DashboardView({ user, summary, foods, onDeleteFood, onLogWater, setTab }) {
   const percentage = Math.min(100, (summary.calories / summary.goal) * 100);
   const remaining = Math.max(0, summary.goal - summary.calories).toFixed(0);
 
@@ -41,15 +41,9 @@ export default function DashboardView({ user, summary, foods, onDeleteFood, onLo
           title="Water"
           value={`${(summary.water_ml / 1000).toFixed(1)} L`}
           buttonLabel="+250 ml"
-          onIncrement={() => onLogActivity(summary.water_ml + 250, summary.exercise_minutes)}
-        />
-
-        <StatCard
-          icon={<Dumbbell />}
-          title="Exercise"
-          value={`${summary.exercise_minutes} min`}
-          buttonLabel="+10 min"
-          onIncrement={() => onLogActivity(summary.water_ml, summary.exercise_minutes + 10)}
+          secondaryLabel="−250 ml"
+          onIncrement={() => onLogWater(summary.water_ml + 250)}
+          onDecrement={() => onLogWater(Math.max(0, summary.water_ml - 250))}
         />
       </section>
 
