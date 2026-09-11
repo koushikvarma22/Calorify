@@ -2,7 +2,6 @@ import os
 import sys
 from pathlib import Path
 
-# Ensure backend and project root are in sys.path
 _CURRENT_DIR = Path(__file__).resolve().parent
 _PARENT_DIR = _CURRENT_DIR.parent
 for _p in [str(_PARENT_DIR), str(_CURRENT_DIR)]:
@@ -36,7 +35,16 @@ def create_app(config_name=None):
     def health():
         return jsonify(status='ok', service='Calorify API', version='1.0.0'), 200
 
-    # Register blueprints
+    @app.get('/api/ai-health')
+    def ai_health():
+        key = os.getenv('OPENAI_API_KEY', '').strip()
+        model = os.getenv('OPENAI_MODEL', 'gpt-4.1-mini').strip()
+        return jsonify(
+            openai_key_configured=bool(key),
+            openai_key_prefix=(key[:7] + '...' if key else ''),
+            model=model,
+        ), 200
+
     app.register_blueprint(user_bp)
     app.register_blueprint(food_bp)
     app.register_blueprint(daily_log_bp)
