@@ -57,14 +57,17 @@ function App() {
     if (user) loadData(user.uid);
   };
 
-  const handleLogActivity = async (water, exercise) => {
+  const handleLogWater = async (water) => {
     if (!user) return;
-    await api.post('/daily-log', {
-      firebase_uid: user.uid,
-      water_ml: water,
-      exercise_minutes: exercise
-    });
-    loadData(user.uid);
+    try {
+      await api.post('/daily-log', {
+        firebase_uid: user.uid,
+        water_ml: Math.max(0, water),
+      });
+      await loadData(user.uid);
+    } catch (err) {
+      alert(err.response?.data?.error || 'Could not update water intake');
+    }
   };
 
   if (user === undefined) {
@@ -90,7 +93,7 @@ function App() {
             summary={summary}
             foods={foods}
             onDeleteFood={handleDeleteFood}
-            onLogActivity={handleLogActivity}
+            onLogWater={handleLogWater}
             setTab={setTab}
           />
         )}
