@@ -1,20 +1,22 @@
 import axios from 'axios';
 
-const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000/api',
-  timeout: 15000,
-});
+const rawBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+const baseURL = rawBaseUrl.replace(/\/+$/, '');
 
-api.interceptors.request.use(
-  (config) => config,
-  (error) => Promise.reject(error)
-);
+const api = axios.create({
+  baseURL,
+  timeout: 60000,
+  headers: { Accept: 'application/json' },
+});
 
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    const message = error.response?.data?.error || error.message || 'Request failed';
-    console.error(`[API Error]: ${message}`);
+    const status = error.response?.status;
+    const message = error.response?.data?.error ||
+      (status === 0 ? 'Could not reach the Calorify server.' : error.message) ||
+      'Request failed';
+    console.error(`[Calorify API ${status || ''}] ${message}`);
     return Promise.reject(error);
   }
 );
